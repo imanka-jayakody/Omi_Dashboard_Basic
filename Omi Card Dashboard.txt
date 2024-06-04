@@ -1,0 +1,219 @@
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Omi Card Dashboard',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: OmiDashboard(),
+    );
+  }
+}
+
+class OmiDashboard extends StatefulWidget {
+  @override
+  _OmiDashboardState createState() => _OmiDashboardState();
+}
+
+class _OmiDashboardState extends State<OmiDashboard> {
+  Map<String, Map<String, bool>> cardAvailability = {
+    'Hearts': {
+      '7': true, '8': true, '9': true, '10': true, 'Jack': true, 'Queen': true, 'King': true, 'Ace': true,
+    },
+    'Diamonds': {
+      '7': true, '8': true, '9': true, '10': true, 'Jack': true, 'Queen': true, 'King': true, 'Ace': true,
+    },
+    'Clubs': {
+      '7': true, '8': true, '9': true, '10': true, 'Jack': true, 'Queen': true, 'King': true, 'Ace': true,
+    },
+    'Spades': {
+      '7': true, '8': true, '9': true, '10': true, 'Jack': true, 'Queen': true, 'King': true, 'Ace': true,
+    },
+  };
+
+  String? selectedClan;
+  String? selectedCardNumber;
+  String? errorText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Omi Card Dashboard'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DropdownButtonFormField<String>(
+              value: selectedClan,
+              hint: Text('Select Clan'),
+              items: cardAvailability.keys.map((clan) {
+                return DropdownMenuItem<String>(
+                  value: clan,
+                  child: Text(clan),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedClan = value;
+                  selectedCardNumber = null;
+                  errorText = null;
+                });
+              },
+            ),
+            SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: selectedCardNumber,
+              hint: Text('Select Card Number'),
+              items: selectedClan != null
+                  ? cardAvailability[selectedClan!]!.entries.map((entry) {
+                return DropdownMenuItem<String>(
+                  value: entry.key,
+                  child: Text(
+                    entry.key,
+                    style: TextStyle(
+                      color: entry.value ? Colors.green : Colors.red,
+                    ),
+                  ),
+                );
+              }).toList()
+                  : [],
+              onChanged: (value) {
+                setState(() {
+                  selectedCardNumber = value;
+                  errorText = null;
+                });
+              },
+            ),
+            SizedBox(height: 16),
+            if(selectedClan != null)
+              Text(
+                'Available Cards: ${_getAvailableCardCount()}',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            SizedBox(height: 16),
+            if (errorText != null)
+              Text(
+                errorText!,
+                style: TextStyle(color: Colors.red),
+              ),
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                // Validate selected card
+                if (selectedClan != null && selectedCardNumber != null) {
+                  if (cardAvailability[selectedClan!]![selectedCardNumber!]!) {
+                    setState(() {
+                      cardAvailability[selectedClan!]![selectedCardNumber!] = false;
+                      selectedCardNumber = null; // Reset selected card number after playing
+                      errorText = null;
+                      if (_isGameEnd()) {
+                        _showGameEndPopup(context);
+                      }
+                    });
+                  } else {
+                    setState(() {
+                      errorText = 'Card already used';
+                    });
+                  }
+                } else {
+                  setState(() {
+                    errorText = 'Please select both Clan and Card Number';
+                  });
+                }
+              },
+              child: Text('Play Card'),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Available Cards:',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: selectedClan != null
+                  ? cardAvailability[selectedClan!]!.entries.map((entry) {
+                return Text(
+                  '${entry.key}: ${entry.value ? "Available" : "Not Available"}',
+                  style: TextStyle(
+                    color: entry.value ? Colors.green : Colors.red,
+                  ),
+                );
+              }).toList()
+                  : [],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _getAvailableCardCount() {
+    int count = 0;
+    cardAvailability[selectedClan!]!.forEach((key, value) {
+      if (value) {
+        count++;
+      }
+    });
+    return count;
+  }
+
+  bool _isGameEnd() {
+    int totalAvailableCards = 0;
+    cardAvailability.forEach((clan, cards) {
+      cards.forEach((card, available) {
+        if (available) {
+          totalAvailableCards++;
+        }
+      });
+    });
+    return totalAvailableCards == 0;
+  }
+
+  void _showGameEndPopup(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Game End'),
+          content: Text('All cards have been played. Would you like to start a new game?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                _resetGame();
+                Navigator.of(context).pop();
+              },
+              child: Text('New Game'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _resetGame() {
+    setState(() {
+      cardAvailability.forEach((clan, cards) {
+        cards.forEach((card, _) {
+          cardAvailability[clan]![card] = true;
+        });
+      });
+    });
+  }
+}
